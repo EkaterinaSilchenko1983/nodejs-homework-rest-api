@@ -78,7 +78,7 @@ router.put('/:id', async (req, res, next) => {
     }
 
     if (!name && !email && !phone) {
-      res.status(400).json({ message: '"message": "missing fields"' });
+      res.status(400).json({ message: 'missing fields' });
     }
 
     const result = await Contact.findByIdAndUpdate(id, req.body, { new: true });
@@ -95,7 +95,7 @@ router.patch('/:id/favorite', async (req, res, next) => {
   try {
     const { error } = schemas.schemaPatch.validate(req.body);
     if (error) {
-      throw HttpError(400, error.message);
+      throw HttpError(400, 'missing field favorite');
     }
 
     const { id } = req.params;
@@ -103,10 +103,10 @@ router.patch('/:id/favorite', async (req, res, next) => {
       throw HttpError(400, `${id} is not valid id`);
     }
 
-    const { name, email, phone } = req.body;
-    if (!name && !email && !phone) {
-      res.status(400).json({ message: 'missing field favorite' });
-    }
+    // const { favorite } = req.body;
+    // if (favorite) {
+    //   res.status(400).json({ message: 'missing field favorite' });
+    // }
 
     const result = await Contact.findByIdAndUpdate(id, req.body, {
       new: true,
