@@ -1,27 +1,18 @@
 const express = require('express');
-const Joi = require('joi');
 
-const contacts = require('../../models/contacts');
+const { isValidObjectId } = require('mongoose');
+
+const { Contact } = require('../../models/contact');
+
+const { schemas } = require('../../models/contact');
 
 const { HttpError } = require('../../helpers');
 
 const router = express.Router();
 
-const schemaPost = Joi.object({
-  name: Joi.string().required(),
-  email: Joi.string().required(),
-  phone: Joi.string().required(),
-});
-
-const schemaPut = Joi.object({
-  name: Joi.string().optional(),
-  email: Joi.string().optional(),
-  phone: Joi.string().optional(),
-});
-
 router.get('/', async (req, res, next) => {
   try {
-    const result = await contacts.listContacts();
+    const result = await Contact.find();
     res.json(result);
   } catch (error) {
     next(error);
@@ -31,7 +22,12 @@ router.get('/', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await contacts.getContactById(id);
+
+    if (!isValidObjectId(id)) {
+      throw HttpError(400, `${id} is not valid id`);
+    }
+
+    const result = await Contact.findById(id);
     if (!result) {
       throw HttpError(404, 'Not found');
     }
@@ -43,11 +39,11 @@ router.get('/:id', async (req, res, next) => {
 
 router.post('/', async (req, res, next) => {
   try {
-    const { error } = schemaPost.validate(req.body);
+    const { error } = schemas.schemaPost.validate(req.body);
     if (error) {
       throw HttpError(400, error.message);
     }
-    const result = await contacts.addContact(req.body);
+    const result = await Contact.create(req.body);
     res.status(201).json(result);
   } catch (error) {
     next(error);
@@ -57,7 +53,7 @@ router.post('/', async (req, res, next) => {
 router.delete('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await contacts.removeContact(id);
+    const result = await Contact.findByIdAndRemove(id);
     if (!result) {
       throw HttpError(404, 'Not found');
     }
@@ -70,18 +66,51 @@ router.delete('/:id', async (req, res, next) => {
 router.put('/:id', async (req, res, next) => {
   try {
     const { name, email, phone } = req.body;
-    const { error } = schemaPut.validate(req.body);
+    const { error } = schemas.schemaPut.validate(req.body);
     if (error) {
       throw HttpError(400, error.message);
     }
 
     const { id } = req.params;
 
-    if (!name && !email && !phone) {
-      res.status(400).json({ message: '"message": "missing fields"' });
+    if (!isValidObjectId(id)) {
+      throw HttpError(400, `${id} is not valid id`);
     }
 
-    const result = await contacts.updateContact(id, req.body);
+    if (!name && !email && !phone) {
+      res.status(400).json({ message: 'missing fields' });
+    }
+
+    const result = await Contact.findByIdAndUpdate(id, req.body, { new: true });
+    if (!result) {
+      throw HttpError(404, 'Not found');
+    }
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch('/:id/favorite', async (req, res, next) => {
+  try {
+    const { error } = schemas.schemaPatch.validate(req.body);
+    if (error) {
+      throw HttpError(400, 'missing field favorite');
+    }
+
+    const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      throw HttpError(400, `${id} is not valid id`);
+    }
+
+    // const { favorite } = req.body;
+    // if (!req.body) {
+    //   res.status(400).json({ message: 'missing field favorite' });
+    // }
+
+    const result = await Contact.findByIdAndUpdate(id, req.body, {
+      new: true,
+    });
     if (!result) {
       throw HttpError(404, 'Not found');
     }
